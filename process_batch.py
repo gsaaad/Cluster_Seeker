@@ -1,0 +1,87 @@
+import os
+import pandas as pd
+from tqdm import tqdm
+from pathlib import Path
+import argparse
+import time
+
+todays_date = time.strftime("%m-%d")
+def process_directory(directory):
+    # for file in directory that starts with batch_ and ends with .txt
+    for file in os.listdir(directory):
+        if file.startswith("batch_") and file.endswith(".txt") and not file.endswith("_output.txt"):
+            print(f"Processing batch file: {file}")
+            batch_file_path = os.path.join(directory, file)
+            # run process_batch.py with the batch file as argument
+            os.system(f"python process_batch.py {batch_file_path}")
+            time.sleep(0.05)
+# Enable long path support by prefixing with \\?\
+def safe_path(path):
+    if os.name == 'nt':
+        return f"\\\\?\\{path}"
+    return path
+
+
+# Function to gather file information
+def gather_file_info(directories):
+    file_info_list = []
+    for directory in directories:
+        folder_path = Path(directory)
+        for root, _, files in tqdm(os.walk(folder_path), desc=f"Scanning {directory}"):
+            for file in files:
+                try:
+                    file_path = Path(root) / file
+                    safe_file_path = safe_path(str(file_path))
+                    file_size = os.path.getsize(safe_file_path)
+                    created_time = os.path.getctime(safe_file_path)
+                    modified_time = os.path.getmtime(safe_file_path)
+                    file_extension = file_path.suffix.lower()
+                    file_info_list.append([file, file_extension, file_size, created_time, modified_time, str(file_path)])
+                except Exception as e:
+                    print(f"Error processing file {file_path}: {e}")
+    return file_info_list
+def process_batch(file):
+
+    with open(file, 'r') as bf:
+        directories = [line.strip() for line in bf]
+
+    # Gather information from all directories in the batch
+    all_file_info = gather_file_info(directories)
+    print("We got information for ", len(all_file_info), " files.")
+
+    # Create DataFrame
+    columns = ['File Name', 'File Extension', 'File Size', 'Created Time', 'Modified Time', 'File Path']
+    df = pd.DataFrame(all_file_info, columns=columns)
+
+    # Convert times from epoch to human-readable format with date and time
+    df['Created Time'] = pd.to_datetime(df['Created Time'], unit='s').dt.strftime('%Y-%m-%d %H:%M:%S')
+    df['Modified Time'] = pd.to_datetime(df['Modified Time'], unit='s').dt.strftime('%Y-%m-%d %H:%M:%S')
+    output_path = file.replace('.txt', f'_output.txt')
+    # this can take a while
+    print("Saving CSV file...")
+    df.to_csv(output_path, index=False)
+    print("CSV file saved.")
+
+    print("Saving Excel files...")
+    with pd.ExcelWriter(output_path.replace('.txt', '_all_files.xlsx')) as writer:
+        df.to_excel(writer, sheet_name='All Files', index=False)
+
+    # Save extensions only to another Excel file
+    with pd.ExcelWriter(output_path.replace('.txt', '_extensions.xlsx')) as writer:
+        df.groupby('File Extension').apply(lambda x: x.to_excel(writer, sheet_name=f"Ext_{x.name.strip('.')}", index=False))
+    print("Excel files saved.")
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Process a batch of directories.')
+    parser.add_argument('path', type=str, help='Path to the batch file or directory.')
+    args = parser.parse_args()
+
+    if os.path.isfile(args.path):
+        process_batch(args.path)
+    elif os.path.isdir(args.path):
+        process_directory(args.path)
+    else:
+        print("The provided path is neither a file nor a directory.")
+
+
+
