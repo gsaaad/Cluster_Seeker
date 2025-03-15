@@ -19,9 +19,6 @@ if __name__ == '__main__':
     target_last_folder = os.path.basename(os.path.normpath(batch_directory))
     print(f"Launching SLURM job for batch {target_last_folder}...")
 
-    #read
-
-
     if not os.path.exists('slurm_logs'):
         os.makedirs('slurm_logs')
     SBATCH_STRING = f"""#!/bin/sh
@@ -48,6 +45,9 @@ if __name__ == '__main__':
     script_path = os.path.join(dirpath, "scr.sh")
     with open(script_path, "w") as tmpfile:
         tmpfile.write(SBATCH_STRING)
-    os.system(f"sbatch {script_path}")
+
+    for _ in tqdm(range(1), desc="Submitting SLURM job"):
+        os.system(f"sbatch {script_path}")
+        time.sleep(0.01)
+
     print(f"Launched from {script_path}")
-    time.sleep(0.01)

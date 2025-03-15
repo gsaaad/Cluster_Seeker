@@ -7,10 +7,8 @@ def is_parent(path, other_paths):
     path = Path(path)
     return any(Path(other).is_relative_to(path) for other in other_paths if other != str(path))
 
-
 def filter_child_directories(directories):
     return [dir for dir in directories if not is_parent(dir, directories)]
-
 
 def list_subdirectories(folders, output_file):
     subdirs = []
@@ -32,7 +30,6 @@ def list_subdirectories(folders, output_file):
     if not child_dirs:
         print("No subdirectories found.")
 
-# split_directories
 def split_directories(textFile, output_folder):
     print("Splitting directories into batches...")
     with open(textFile, 'r') as f:
@@ -53,19 +50,20 @@ def split_directories(textFile, output_folder):
                 batch_number += 1
                 batch = []
 
-if __name__ == '__main__':
-    output_folder = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'output')
-    output_file = 'subdirectories.txt'
-    output = os.path.join(output_folder, output_file)
-
-    parser = argparse.ArgumentParser(description='List all subdirectories.')
-    parser.add_argument('--output_file', type=str, default=output, help='Output file for subdirectories.')
-    args = parser.parse_args()
-    folders = [r'Z:\migratedData\Lab\Social_Sleep', r'Z:\migratedData\Lab\Sotelo_2023', r'Z:\migratedData\Lab\Other 2 chamber experiments']
-        # output folder is where current script is located + 'output'
-
-    list_subdirectories(folders, args.output_file)
-    output_folder = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'output/file_batches')
+def process_directories(folders, output_file, output_folder):
+    list_subdirectories(folders, output_file)
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
-    split_directories(args.output_file, output_folder)
+    split_directories(output_file, output_folder)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='List all subdirectories and split them into batches.')
+    parser.add_argument('--folders', nargs='+', required=True, help='List of folders to scan for subdirectories.')
+    parser.add_argument('--output_file', type=str, default='Output/subdirectories.txt', help='Output file for subdirectories list.')
+    parser.add_argument('--output_folder', type=str, default='Output/file_batches', help='Output folder for batches.')
+    args = parser.parse_args()
+
+    # Ensure the Output directory exists
+    os.makedirs(os.path.dirname(args.output_file), exist_ok=True)
+
+    process_directories(args.folders, args.output_file, args.output_folder)
