@@ -4,7 +4,6 @@ import json
 import tempfile
 import time
 import platform
-from pathlib import Path
 
 def convert_path_format(path):
     """Convert path between Windows and Linux formats based on the current OS."""

@@ -4,6 +4,9 @@ import os
 import list_all_directories
 from tkinter import filedialog
 import process_batch
+import Cluster_List_All_Directories
+import convert_path_format
+import launch_slurm_processing
 def list_directories():
     output_file = "Output/subdirectories.txt"
     output_folder = "Output/file_batches"
@@ -36,10 +39,55 @@ def process_selection():
             process_batch.process_batch(file_path)
             messagebox.showinfo("Batch Processing", f"Processed batch file:\n{file_path}")
 
-def launch_slurm_job():
+def launch_slurm_seeker():
     # Placeholder for the actual SLURM job launching function
     messagebox.showinfo("Launch SLURM Job", "SLURM job launched...")
+    output_dir = "Output/scan_results"
+    config_file = filedialog.askopenfilename(
+        title="Select Config File",
+        filetypes=[("JSON Files", "*.json")]
+    )
+    if not config_file:
+        messagebox.showwarning("Warning", "No config file selected.")
+    else:
 
+        selected_directories = []
+        while True:
+            directory = filedialog.askdirectory(mustexist=True, title="Select Directory")
+            if directory:
+                selected_directories.append(directory)
+                if not messagebox.askyesno("Continue", "Do you want to select another directory?"):
+                    break
+            else:
+                break
+        if not selected_directories:
+            messagebox.showwarning("Warning", "No directories selected.")
+        else:
+            print("Selected folders are:", selected_directories)
+            # convert path format
+            for i, directory in enumerate(selected_directories):
+                selected_directories[i] = convert_path_format.convert_path_format(directory)
+            print("Converted paths:", selected_directories)
+            # check if directory is valid
+            valid_directories = []
+            for directory in selected_directories:
+                if os.path.isdir(directory):
+                    valid_directories.append(directory)
+                else:
+                    print(f"Directory is not valid. {directory}")
+            # job index == number of directories
+            if not valid_directories:
+                messagebox.showwarning("Warning", "No valid directories found.")
+            try:
+                for i, directory in enumerate(valid_directories):
+                    Cluster_List_All_Directories.create_slurm_job_for_directory(directory, config_file, i, output_dir)
+                    messagebox.showinfo("Success", "Cluster List All Directories processed successfully.")
+            except Exception as e:
+                messagebox.showerror("Error", str(e))
+
+def launch_slurmprocessing():
+    # Placeholder for the actual SLURM processing function
+    messagebox.showinfo("SLURM Processing", "SLURM processing...")
 # Create the main window
 root = tk.Tk()
 root.title("Cluster Seeker")
@@ -54,8 +102,6 @@ btn_select = tk.Button(root, text="Select Folder/File", command=process_selectio
 btn_select.pack(pady=10)
 
 Slurm_Title = tk.Label(root, text="SLURM Cluster Seeker", font=("Helvetica", 16))
-
-
 
 # Run the application
 root.mainloop()
