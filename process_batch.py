@@ -71,13 +71,13 @@ def process_batch(file):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process a batch of directories.')
-    parser.add_argument('--path', type=str, default="output/file_batches", help='Path to the batch file or directory.')
+    parser.add_argument('--path', type=str, default="Output/file_batches", help='Path to the batch file or directory.')
     args = parser.parse_args()
 
     batches_path = args.path
     if not os.path.exists(batches_path):
         # use output/file_batches
-        batches_path = os.path.join('output', 'file_batches', batches_path)
+        batches_path = os.path.join('Output', 'file_batches', batches_path)
         if not os.path.exists(os.path.dirname(batches_path)):
             os.makedirs(os.path.dirname(batches_path))
 

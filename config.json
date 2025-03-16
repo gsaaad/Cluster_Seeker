@@ -6,6 +6,7 @@
   "time": "02:00:00",
   "mem": "40G",
   "conda_env": "condacluster",
+  "mail-user": "geosaad@umich.edu",
   "conda_lib_path": "/home/geosaad/miniconda3",
-  "project_directory": "/nfs/turbo/lsa-adae/migratedData/Lab/George/Python/George-Scripts"
+  "project_directory": "/nfs/turbo/lsa-adae/migratedData/Lab/George/Python/George-Scripts/Cluster_Seeker"
 }
