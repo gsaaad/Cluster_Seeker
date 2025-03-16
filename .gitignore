@@ -2,3 +2,8 @@ slurm-*
 slurm_*
 *.out
 .vscode
+batch_
+output/file_batches/*
+output/subdirectories.txt
+Cluster_Seeker/*
+Cluster_Seeker

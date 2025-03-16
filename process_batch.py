@@ -6,15 +6,17 @@ import argparse
 import time
 
 todays_date = time.strftime("%m-%d")
+
 def process_directory(directory):
     # for file in directory that starts with batch_ and ends with .txt
     for file in os.listdir(directory):
-        if file.startswith("batch_") and file.endswith(".txt") and not file.endswith("_output.txt"):
+        if file.startswith("batch_") and file.endswith(".txt"):
             print(f"Processing batch file: {file}")
             batch_file_path = os.path.join(directory, file)
             # run process_batch.py with the batch file as argument
-            os.system(f"python process_batch.py {batch_file_path}")
+            os.system(f"python process_batch.py --path \"{batch_file_path}\"")
             time.sleep(0.05)
+
 # Enable long path support by prefixing with \\?\
 def safe_path(path):
     if os.name == 'nt':
@@ -40,8 +42,8 @@ def gather_file_info(directories):
                 except Exception as e:
                     print(f"Error processing file {file_path}: {e}")
     return file_info_list
-def process_batch(file):
 
+def process_batch(file):
     with open(file, 'r') as bf:
         directories = [line.strip() for line in bf]
 
@@ -56,32 +58,32 @@ def process_batch(file):
     # Convert times from epoch to human-readable format with date and time
     df['Created Time'] = pd.to_datetime(df['Created Time'], unit='s').dt.strftime('%Y-%m-%d %H:%M:%S')
     df['Modified Time'] = pd.to_datetime(df['Modified Time'], unit='s').dt.strftime('%Y-%m-%d %H:%M:%S')
-    output_path = file.replace('.txt', f'_output.txt')
-    # this can take a while
-    print("Saving CSV file...")
-    df.to_csv(output_path, index=False)
-    print("CSV file saved.")
+    output_path = file.replace('.txt', f'_output.csv')
 
     print("Saving Excel files...")
-    with pd.ExcelWriter(output_path.replace('.txt', '_all_files.xlsx')) as writer:
+    with pd.ExcelWriter(output_path.replace('.csv', '_all_files.xlsx')) as writer:
         df.to_excel(writer, sheet_name='All Files', index=False)
 
     # Save extensions only to another Excel file
-    with pd.ExcelWriter(output_path.replace('.txt', '_extensions.xlsx')) as writer:
+    with pd.ExcelWriter(output_path.replace('.csv', '_extensions.xlsx')) as writer:
         df.groupby('File Extension').apply(lambda x: x.to_excel(writer, sheet_name=f"Ext_{x.name.strip('.')}", index=False))
     print("Excel files saved.")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process a batch of directories.')
-    parser.add_argument('path', type=str, help='Path to the batch file or directory.')
+    parser.add_argument('--path', type=str, default="output/file_batches", help='Path to the batch file or directory.')
     args = parser.parse_args()
 
-    if os.path.isfile(args.path):
-        process_batch(args.path)
-    elif os.path.isdir(args.path):
-        process_directory(args.path)
+    batches_path = args.path
+    if not os.path.exists(batches_path):
+        # use output/file_batches
+        batches_path = os.path.join('output', 'file_batches', batches_path)
+        if not os.path.exists(os.path.dirname(batches_path)):
+            os.makedirs(os.path.dirname(batches_path))
+
+    if os.path.isfile(batches_path):
+        process_batch(batches_path)
+    elif os.path.isdir(batches_path):
+        process_directory(batches_path)
     else:
         print("The provided path is neither a file nor a directory.")
-
-
-

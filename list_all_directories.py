@@ -58,11 +58,12 @@ def process_directories(folders, output_file, output_folder):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='List all subdirectories and split them into batches.')
-    parser.add_argument('--folders', nargs='+', required=True, help='List of folders to scan for subdirectories.')
+    parser.add_argument('--folders', nargs='+', required=False, help='List of folders to scan for subdirectories.')
     parser.add_argument('--output_file', type=str, default='Output/subdirectories.txt', help='Output file for subdirectories list.')
     parser.add_argument('--output_folder', type=str, default='Output/file_batches', help='Output folder for batches.')
     args = parser.parse_args()
-
+    if not args.folders:
+        args.folders = [r'Z:\migratedData\Lab\George\ASD-exp-Matlab', r'Z:\migratedData\Lab\George\place-reward-task']
     # Ensure the Output directory exists
     os.makedirs(os.path.dirname(args.output_file), exist_ok=True)
 
