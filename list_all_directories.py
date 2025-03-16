@@ -1,5 +1,6 @@
 import os
 import argparse
+import platform
 from pathlib import Path
 from tqdm import tqdm
 
@@ -10,11 +11,26 @@ def is_parent(path, other_paths):
 def filter_child_directories(directories):
     return [dir for dir in directories if not is_parent(dir, directories)]
 
+def convert_path_format(path):
+    """Convert path between Windows and Linux formats based on the current OS."""
+    system = platform.system()
+
+    if system == "Windows":
+        # If on Windows and path looks like a Linux path starting with /nfs/turbo
+        if path.startswith('/nfs/turbo'):
+            return path.replace('/nfs/turbo/lsa-adae', 'Z:').replace('/', '\\')
+        return path.replace('/', '\\')
+    else:  # Linux or other Unix-like
+        # If on Linux and path looks like a Windows path starting with Z:
+        if path.startswith('Z:'):
+            return path.replace('Z:', '/nfs/turbo/lsa-adae').replace('\\', '/')
+        return path.replace('\\', '/')
+
 def list_subdirectories(folders, output_file):
     subdirs = []
     excluded_folders = ['.', '..', '.DS_Store', '.git', '.ipynb_checkpoints', '__pycache__', 'AppData', 'node_modules', '.venv','AnaConda3','.vscode']
     for folder in tqdm(folders, desc="Scanning folders"):
-        folder_path = Path(folder)
+        folder_path = Path(convert_path_format(folder))
         print(f"Scanning folder: {folder_path}")
         for root, dirs, files in os.walk(folder_path):
             dirs[:] = [d for d in dirs if d not in excluded_folders and not d.startswith('.')]
@@ -62,8 +78,15 @@ if __name__ == '__main__':
     parser.add_argument('--output_file', type=str, default='Output/subdirectories.txt', help='Output file for subdirectories list.')
     parser.add_argument('--output_folder', type=str, default='Output/file_batches', help='Output folder for batches.')
     args = parser.parse_args()
+
+    system = platform.system()
     if not args.folders:
-        args.folders = [r'Z:\migratedData\Lab\George\ASD-exp-Matlab', r'Z:\migratedData\Lab\George\place-reward-task']
+        default_folders = [r'Z:\migratedData\Lab\George\Python\George-Scripts\Cluster_Seeker']
+        if system == "Windows":
+            args.folders = default_folders
+        else:  # Linux or other Unix-like
+            args.folders = [convert_path_format(folder) for folder in default_folders]
+
     # Ensure the Output directory exists
     os.makedirs(os.path.dirname(args.output_file), exist_ok=True)
 

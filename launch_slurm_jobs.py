@@ -8,14 +8,16 @@ from tqdm import tqdm
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='SLURM job launcher for searching files and directories.')
     parser.add_argument('--config', type=str, required=True, help='Path to SLURM configuration JSON file.')
-    parser.add_argument('--batches_dir', type=str, default='batches', help='Path to batches directory.')
 
     args = parser.parse_args()
+
+
 
     with open(args.config, 'r') as config_file:
         config = json.load(config_file)
 
-    batch_directory = args.batches_dir
+    batch_directory = "Output/file_batches"
+    print("Batch directory: ", batch_directory)
     target_last_folder = os.path.basename(os.path.normpath(batch_directory))
     print(f"Launching SLURM job for batch {target_last_folder}...")
 
@@ -38,7 +40,7 @@ if __name__ == '__main__':
 
     cd {config['project_directory']}
 
-    python process_batch.py "{os.path.join(args.batches_dir, batch_directory)}"
+    python process_batch.py --path "{os.path.join(batch_directory)}"
     """
 
     dirpath = tempfile.mkdtemp()

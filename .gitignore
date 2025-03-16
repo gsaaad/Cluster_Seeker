@@ -7,4 +7,5 @@ output/file_batches/*
 output/subdirectories.txt
 Cluster_Seeker/*
 Cluster_Seeker
+config.json
 
