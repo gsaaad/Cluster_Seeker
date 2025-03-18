@@ -81,7 +81,7 @@ if __name__ == '__main__':
 
     system = platform.system()
     if not args.folders:
-        default_folders = [r'Z:\migratedData\Lab\George\Python\George-Scripts\Cluster_Seeker']
+        default_folders = [r'path/to/folder1', r'path/to/folder2']
         if system == "Windows":
             args.folders = default_folders
         else:  # Linux or other Unix-like
