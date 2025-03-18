@@ -4,6 +4,7 @@ import json
 import tempfile
 import time
 import platform
+from pathlib import Path
 
 def convert_path_format(path):
     """Convert path between Windows and Linux formats based on the current OS."""
@@ -94,16 +95,16 @@ def create_merge_job(config, job_ids, output_dir, batch_output_dir):
 #SBATCH --job-name={job_name}
 #SBATCH --output={log_file}
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=1
+#SBATCH --cpus-per-task=4
+#SBATCH --mail-user=geosaad@umich.edu
 #SBATCH --time=01:00:00
-#SBATCH --mem=8G
+#SBATCH --mem=20G
 #SBATCH --dependency={dependency_string}
 
 source ~/.bashrc
 conda activate {config['conda_env']}
 
 export LD_LIBRARY_PATH={config['conda_lib_path']}:$LD_LIBRARY_PATH
-
 cd {config['project_directory']}
 
 # Merge results and create batches
