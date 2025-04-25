@@ -2,7 +2,6 @@ import os
 import argparse
 import platform
 from pathlib import Path
-from tqdm import tqdm
 
 def is_parent(path, other_paths):
     path = Path(path)
@@ -26,16 +25,23 @@ def convert_path_format(path):
             return path.replace('Z:', '/nfs/turbo/lsa-adae').replace('\\', '/')
         return path.replace('\\', '/')
 
-def list_subdirectories(folders, output_file):
+def list_subdirectories(folder, output_file):
     subdirs = []
     excluded_folders = ['.', '..', '.DS_Store', '.git', '.ipynb_checkpoints', '__pycache__', 'AppData', 'node_modules', '.venv','AnaConda3','.vscode']
-    for folder in tqdm(folders, desc="Scanning folders"):
-        folder_path = Path(convert_path_format(folder))
-        print(f"Scanning folder: {folder_path}")
-        for root, dirs, files in os.walk(folder_path):
-            dirs[:] = [d for d in dirs if d not in excluded_folders and not d.startswith('.')]
+    for root, dirs, files in os.walk(folder):
+        if root not in excluded_folders:
             for dir in dirs:
-                subdirs.append(os.path.join(root, dir))
+                if dir not in excluded_folders:
+                    print("Directory not excluded: ", dir)
+                    subdir_path = os.path.join(root, dir)
+                    # check again that the dir and parent folder are not in the excluded folders
+                    if not any(excluded in subdir_path for excluded in excluded_folders):
+                        # check if the subdir is a child of any other directory
+                        if not is_parent(subdir_path, subdirs):
+                            # check if the subdir is a child of the parent folder
+                            if os.path.commonpath([subdir_path, folder]) == folder:
+                                subdirs.append(subdir_path)
+                                print("Subdirectory found: ", subdir_path)
 
     child_dirs = filter_child_directories(subdirs)
 
@@ -45,13 +51,14 @@ def list_subdirectories(folders, output_file):
 
     if not child_dirs:
         print("No subdirectories found.")
+    return child_dirs
 
 def split_directories(textFile, output_folder):
     print("Splitting directories into batches...")
     with open(textFile, 'r') as f:
         lines = f.readlines()
         print("Number of directories: ", len(lines))
-        batch_size = 100
+        batch_size = 200
         batch_number = 1
         batch = []
 
@@ -66,18 +73,24 @@ def split_directories(textFile, output_folder):
                 batch_number += 1
                 batch = []
 
-def process_directories(folders, output_file, output_folder):
-    list_subdirectories(folders, output_file)
+def process_directories(folders):
+    parent_folder = os.path.dirname(folders[0])
+    output_folder = os.path.join(parent_folder, 'Seeker_Output/file_batches')
+    output_file = os.path.join(parent_folder, 'Seeker_Output/subdirectories.txt')
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+
+    child_directories = list_subdirectories(folders, output_file)
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
     split_directories(output_file, output_folder)
+    return child_directories
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='List all subdirectories and split them into batches.')
     parser.add_argument('--folders', nargs='+', required=False, help='List of folders to scan for subdirectories.')
-    parser.add_argument('--output_file', type=str, default='Output/subdirectories.txt', help='Output file for subdirectories list.')
-    parser.add_argument('--output_folder', type=str, default='Output/file_batches', help='Output folder for batches.')
     args = parser.parse_args()
+
 
     system = platform.system()
     if not args.folders:
@@ -90,4 +103,4 @@ if __name__ == '__main__':
     # Ensure the Output directory exists
     os.makedirs(os.path.dirname(args.output_file), exist_ok=True)
 
-    process_directories(args.folders, args.output_file, args.output_folder)
+    process_directories(args.folders)

@@ -15,13 +15,11 @@ def process_directory(directory):
             batch_file_path = os.path.join(directory, file)
             # run process_batch.py with the batch file as argument
             os.system(f"python process_batch.py --path \"{batch_file_path}\"")
-            time.sleep(0.05)
 
 # Enable long path support by prefixing with \\?\
 def safe_path(path):
     if os.name == 'nt':
         return f"\\\\?\\{path}"
-    return path
 
 
 # Function to gather file information
@@ -58,7 +56,10 @@ def process_batch(file):
     # Convert times from epoch to human-readable format with date and time
     df['Created Time'] = pd.to_datetime(df['Created Time'], unit='s').dt.strftime('%Y-%m-%d %H:%M:%S')
     df['Modified Time'] = pd.to_datetime(df['Modified Time'], unit='s').dt.strftime('%Y-%m-%d %H:%M:%S')
-    output_path = file.replace('.txt', f'_output.csv')
+    # output path is parent folder of the batch file with the same name but with _output.csv
+    parent_folder = os.path.dirname(os.path.dirname(file))
+    print("Parent folder: ", parent_folder)
+    output_path = os.path.join(parent_folder, f"{os.path.basename(file).replace('.txt', '')}.csv")
 
     print("Saving Excel files...")
     with pd.ExcelWriter(output_path.replace('.csv', '_all_files.xlsx')) as writer:
@@ -66,7 +67,16 @@ def process_batch(file):
 
     # Save extensions only to another Excel file
     with pd.ExcelWriter(output_path.replace('.csv', '_extensions.xlsx')) as writer:
-        df.groupby('File Extension').apply(lambda x: x.to_excel(writer, sheet_name=f"Ext_{x.name.strip('.')}", index=False))
+        df.groupby('File Extension').apply(
+            lambda x: x.to_excel(
+            writer,
+            sheet_name=(
+                'Empty Ext' if not x.name or x.name == '.'
+                else f"{x.name.strip('.')}"
+            ),
+            index=False
+            )
+        )
     print("Excel files saved.")
 
 if __name__ == '__main__':
