@@ -11,3 +11,4 @@ Cluster_Seeker
 config
 config.json
 __pycache__/
+*.docx

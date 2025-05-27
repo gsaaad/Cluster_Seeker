@@ -74,9 +74,10 @@ def split_directories(textFile, output_folder):
                 batch = []
 
 def process_directories(folders):
-    parent_folder = os.path.dirname(folders[0])
-    output_folder = os.path.join(parent_folder, 'Seeker_Output/file_batches')
-    output_file = os.path.join(parent_folder, 'Seeker_Output/subdirectories.txt')
+    print("Folders to process: ", folders)
+
+    output_folder = os.path.join(folders, 'Seeker_Output/file_batches')
+    output_file = os.path.join(folders, 'Seeker_Output/subdirectories.txt')
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
@@ -98,9 +99,9 @@ if __name__ == '__main__':
         if system == "Windows":
             args.folders = default_folders
         else:  # Linux or other Unix-like
-            args.folders = [convert_path_format(folder) for folder in default_folders]
+            input_folder = [convert_path_format(folder) for folder in default_folders]
 
     # Ensure the Output directory exists
     os.makedirs(os.path.dirname(args.output_file), exist_ok=True)
-
-    process_directories(args.folders)
+    input_folder = [convert_path_format(folder) for folder in default_folders]
+    process_directories(input_folder)

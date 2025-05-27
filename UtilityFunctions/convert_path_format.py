@@ -22,6 +22,3 @@ def convert_path_format(path):
                 return path.replace('Z:', '/nfs/turbo/lsa-adae/')
         return path.replace('\\', '/')
 
-path_test = r'Z:\migratedData\Lab\George\Python\George-Scripts\Cluster_Seeker'
-
-print(convert_path_format(path_test)) # Expected: /nfs/turbo/lsa-adae/migratedData/Lab/George/Python/George-Scripts/Cluster_Seeker

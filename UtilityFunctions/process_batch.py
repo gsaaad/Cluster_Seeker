@@ -31,7 +31,11 @@ def gather_file_info(directories):
             for file in files:
                 try:
                     file_path = Path(root) / file
-                    safe_file_path = safe_path(str(file_path))
+                    print("file_path: ", file_path)
+                    safe_file_path = file_path
+                    print(f"DEBUG: Attempting os.stat on: {repr(safe_file_path)}")
+                    stats = os.stat(safe_file_path)
+                    file_size = stats.st_size
                     file_size = os.path.getsize(safe_file_path)
                     created_time = os.path.getctime(safe_file_path)
                     modified_time = os.path.getmtime(safe_file_path)

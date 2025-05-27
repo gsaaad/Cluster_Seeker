@@ -1,11 +1,11 @@
 import os
 import argparse
-from UtilityFunctions import list_all_directories, process_batch
+from UtilityFunctions import list_all_directories, process_batch, convert_path_format
 
 def main():
     """Gets a folder path from command-line arguments and processes it."""
     parser = argparse.ArgumentParser(description="Process directories in a specified folder.")
-    parser.add_argument("--folder", help="Path to the folder to process.")
+    parser.add_argument("folder", help="Path to the folder to process.")
     args = parser.parse_args()
 
     folder_path = args.folder
@@ -23,9 +23,11 @@ def main():
     try:
         print(f"Listing directories in '{folder_path}'...")
         # Assuming list_all_directories returns a list of directory paths
+        # check if the folder path is valid, and if it starts with nfs
+        folder_path = convert_path_format.convert_path_format(folder_path)
         list_all_directories.process_directories(folder_path)
         output_folder = os.path.join(folder_path, 'Seeker_Output/file_batches')
-
+        print(f"Output folder: {output_folder}")
         for batch_file in os.listdir(output_folder):
             batch_file_path = os.path.join(output_folder, batch_file)
             if os.path.isfile(batch_file_path):
