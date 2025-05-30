@@ -27,6 +27,10 @@ def main():
         folder_path = convert_path_format.convert_path_format(folder_path)
         list_all_directories.process_directories(folder_path)
         output_folder = os.path.join(folder_path, 'Seeker_Output/file_batches')
+        # make sure the output folder exists
+        if not os.path.exists(output_folder):
+            print(f"Output folder '{output_folder}' does not exist. Please check the path.")
+            return
         print(f"Output folder: {output_folder}")
         for batch_file in os.listdir(output_folder):
             batch_file_path = os.path.join(output_folder, batch_file)
