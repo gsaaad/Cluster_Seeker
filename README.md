@@ -1,26 +1,30 @@
 # Running Cluster Seeker
+Seeker is a distributed file system analysis tool designed for large-scale directory scanning and file metadata extraction that works locally and on HPC clusters. It efficiently processes massive directory structures by leveraging SLURM job scheduling to parallelize operations across compute nodes, making it ideal for analyzing petabyte-scale file systems.
 
-## Step 1: List All Directories
 
-Before running any other scripts, start by executing the `list_all_directories` script.
-Add the folders you want to search for, on line 64
-or call the function: with the following parameters
-python .\list_all_directories.py --folders "path/to/folder1" "path/to/folder2"
+### Step 1: Assess Directory Size
+```bash
+# Check directory size (Linux/macOS)
+du -sh /path/to/directory
 
-This script will generate an array of target sub-directories that you want to investigate
+# Check directory size (Windows)
+dir /s "C:\path\to\directory"
+```
 
-## Step 2: Launch Slurm Job
+### Step 2: Execute Based on Size
 
-Once the directories are split into batches, you can proceed to launch the Slurm job.
-`python launch_slurm_jobs.py --config config.json --batches_dir file_batches`
-The Slurm job will process each batch separately and generate a CSV file for each job. Make sure to configure the Slurm job parameters according to your requirements.
+#### For directories **LESS than 200GB** - Use Local Processing
+```bash
+python seeker.py /path/to/folder
+```
 
-## Step 2A: Check Slurm Job
+**Advantages:**
+- Simple single-command execution
+- No SLURM configuration required
+- Immediate results
+- Ideal for smaller datasets and quick analysis
 
-<!-- Check slurm job -->
-
-`squeue -p standard | grep 'UMICHUSERNAME`
-
-## Step 3: Run Combined Find Dup
-
-After all the Slurm jobs have completed and generated their respective CSV files, you can run the combined find dup script. This script will combine all the CSV files and identify any duplicates among them. Execute the combined find dup script to complete the process.
+#### For directories **MORE than 200GB** - Use Cluster Processing
+```bash
+python Cluster_Seeker.py --config config.json --folder "/path/to/folder"
+```

@@ -176,25 +176,25 @@ def list_subdirectories(folder, output_file):
     print(f"Scanning folder: {folder}")
     print(f"Excluding {len(excluded_folders)} folder types...")
 
-    # Add debug option to see what's being excluded
     debug_exclusions = False  # Set to True for debugging
 
-    # Estimate total directories for progress tracking
     print("Estimating directory count for progress tracking...")
     estimated_total = estimate_directory_count(folder, excluded_folders)
 
-    # Initialize progress bar
+    if not should_exclude_path(folder, excluded_folders):
+
+        subdirs.append(folder)
+        tqdm.write(f"Included base folder: {folder}")
+
     with tqdm(total=estimated_total, desc="Scanning directories", unit="dirs") as pbar:
         dirs_processed = 0
 
         for root, dirs, files in os.walk(folder):
-            # Skip if current root directory should be excluded
             if should_exclude_path(root, excluded_folders):
                 if debug_exclusions:
                     print(f"EXCLUDED ROOT: {root}")
                 continue
 
-            # Filter out excluded directories from dirs list to prevent os.walk from descending into them
             dirs_to_remove = []
             for dir_name in dirs:
                 full_dir_path = os.path.join(root, dir_name)
@@ -203,37 +203,30 @@ def list_subdirectories(folder, output_file):
                     if debug_exclusions:
                         print(f"EXCLUDED DIR: {full_dir_path}")
                 else:
-                    if not debug_exclusions:  # Only print when not in debug mode to reduce spam
+                    if not debug_exclusions:
                         tqdm.write(f"Directory not excluded: {dir_name}")
 
-            # Remove excluded directories from dirs list
             for dir_to_remove in dirs_to_remove:
                 dirs.remove(dir_to_remove)
 
-            # Add remaining directories to subdirs list
             for dir_name in dirs:
                 subdir_path = os.path.join(root, dir_name)
+                # --- Remove the is_parent check to include all directories ---
+                if os.path.commonpath([subdir_path, folder]) == folder:
+                    subdirs.append(subdir_path)
+                    tqdm.write(f"Subdirectory found: {subdir_path}")
 
-                # Additional check: ensure it's not a parent of existing directories
-                if not is_parent(subdir_path, subdirs):
-                    # Ensure it's within the target folder
-                    if os.path.commonpath([subdir_path, folder]) == folder:
-                        subdirs.append(subdir_path)
-                        tqdm.write(f"Subdirectory found: {subdir_path}")
-
-            # Update progress bar
             dirs_processed += len(dirs)
             if dirs_processed <= estimated_total:
                 pbar.update(len(dirs))
             else:
-                # If we exceed estimate, update the total
                 pbar.total = dirs_processed + 100
                 pbar.refresh()
 
-    print(f"\nFiltering child directories...")
-    child_dirs = filter_child_directories(subdirs)
-
-    # Write results to file with progress bar
+    print(f"\nSkipping child directory filtering to include all directories...")
+    child_dirs = subdirs  # <-- This now includes all directories, not just leaves
+    seen = set()
+    child_dirs = [x for x in child_dirs if not (x in seen or seen.add(x))]
     print(f"Writing {len(child_dirs)} directories to file...")
     with open(output_file, 'w') as f:
         for subdir in tqdm(child_dirs, desc="Writing directories", unit="dirs"):
@@ -253,7 +246,7 @@ def split_directories(textFile, output_folder):
         lines = f.readlines()
 
     print("Number of directories: ", len(lines))
-    batch_size = 200
+    batch_size = 500
     batch_number = 1
     batch = []
 

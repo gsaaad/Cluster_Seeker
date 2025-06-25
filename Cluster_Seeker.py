@@ -1,17 +1,25 @@
 import os
 import argparse
 import json
-import tempfile
 import time
 import platform
 import subprocess
-from pathlib import Path
 
 def convert_path_format(path):
-    """Convert path between Windows and Linux formats based on the current OS."""
+    """Convert path between Windows and Linux formats based on the current OS, and replace spaces with underscores."""
     print("Path is: ", path)
+    # Replace spaces with underscores
+    new_path = path.replace(' ', '_')
+    if new_path != path and os.path.exists(path):
+            # Only rename if the path exists and needs renaming
+            try:
+                os.rename(path, new_path)
+                print(f"Renamed '{path}' -> '{new_path}'")
+            except Exception as e:
+                print(f"Failed to rename '{path}' -> '{new_path}': {e}")
+                # Optionally, you could raise or handle this differently
+    path = new_path
     system = platform.system()
-    print("System is: ", system)
     if system == "Windows":
         if path.startswith('/nfs/turbo'):
             return path.replace('/nfs/turbo/lsa-adae', 'Z:').replace('/', '\\')
@@ -26,7 +34,6 @@ def convert_path_format(path):
                     reconstructed = '/nfs/turbo/lsa-adae/migratedData'
                 print(f"Reconstructed path: {reconstructed}")
                 return reconstructed.replace('//', '/')
-
             path = path.replace('\\', '/')
             print("Path after replacing backslashes: ", path)
             if path.startswith('Z:/'):
@@ -249,10 +256,22 @@ if __name__ == '__main__':
     folders_to_scan = []
     print("Folders to scan: ", args.folder)
 
+    # Convert all input folders
     for folder in args.folder:
         converted = convert_path_format(folder)
         print(f"Converted '{folder}' -> '{converted}'")
         folders_to_scan.append(converted)
+
+    # Convert base_folder for consistency
+    converted_base_folder = convert_path_format(base_folder)
+
+    # Ensure base folder is included
+    if converted_base_folder not in folders_to_scan:
+        folders_to_scan.append(converted_base_folder)
+
+    # Create output directories using the converted base folder
+    args.output_dir = os.path.join(converted_base_folder, 'Seeker_Output')
+    args.batch_dir = os.path.join(args.output_dir, 'file_batches')
 
     # Validate directories
     valid_folders = []
@@ -268,6 +287,11 @@ if __name__ == '__main__':
         exit(1)
 
     folders_to_scan = valid_folders
+    # add base folder to the list if not already included
+    if base_folder not in folders_to_scan:
+        folders_to_scan.append(base_folder)
+
+    print("Final list of directories to scan:", folders_to_scan)
 
     # Submit scanning jobs
     job_ids = []
