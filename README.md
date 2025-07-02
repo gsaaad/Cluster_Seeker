@@ -60,6 +60,13 @@ python seeker.py /path/to/folder
 python Cluster_Seeker.py --config config.json --folder "/path/to/folder"
 ```
 
+### Use the Seeker_GUI to check all contents in SeekerOutput
+
+```
+python Seeker_GUI.py
+```
+Select a SeekerOutput folder and choose the desired extensions.
+
 ## Acknowledgements
 
 Cluster Seeker was developed with contributions from [George Saad](https://github.com/gsaaad) and the [AER Lab](https://github.com/AER-Lab/AER-Spindle)
