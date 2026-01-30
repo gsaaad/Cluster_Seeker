@@ -41,7 +41,7 @@ class ScanWorker(QThread):
 
             self.progress.emit(f"Processing batch files...")
             batch_files = [f for f in os.listdir(output_folder) if os.path.isfile(os.path.join(output_folder, f))]
-            
+
             for i, batch_file in enumerate(batch_files):
                 batch_file_path = os.path.join(output_folder, batch_file)
                 self.progress.emit(f"Processing batch {i+1}/{len(batch_files)}: {batch_file}")
@@ -319,7 +319,7 @@ class ExtensionViewer(QMainWindow):
         self.scan_progress.setVisible(False)
         self.scan_btn.setEnabled(True)
         self.browse_btn.setEnabled(True)
-        
+
         self.log_scan(f"✅ Scan complete!")
         self.log_scan(f"Output saved to: {output_folder}")
         self.statusBar.showMessage("Scan complete!")
@@ -340,7 +340,7 @@ class ExtensionViewer(QMainWindow):
         self.scan_progress.setVisible(False)
         self.scan_btn.setEnabled(True)
         self.browse_btn.setEnabled(True)
-        
+
         self.log_scan(f"❌ Error: {error_message}")
         self.statusBar.showMessage("Scan failed")
         QMessageBox.critical(self, "Scan Error", f"An error occurred during scanning:\n\n{error_message}")
