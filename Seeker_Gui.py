@@ -5,16 +5,61 @@ from PyQt5.QtWidgets import (
     QApplication, QWidget, QFileDialog, QVBoxLayout, QPushButton, QLabel,
     QListWidget, QListWidgetItem, QTableWidget, QTableWidgetItem,
     QMessageBox, QHBoxLayout, QProgressBar, QScrollArea, QSplitter,
-    QMainWindow, QStatusBar, QFrame
+    QMainWindow, QStatusBar, QFrame, QGroupBox, QLineEdit, QTextEdit
 )
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, QThread, pyqtSignal
 from PyQt5.QtGui import QIcon, QFont
 
-class ExtensionViewer(QMainWindow):  # Changed to QMainWindow for more features
+from UtilityFunctions import list_all_directories, process_batch, convert_path_format
+
+
+class ScanWorker(QThread):
+    """Background thread for scanning directories."""
+    progress = pyqtSignal(str)
+    finished = pyqtSignal(str)
+    error = pyqtSignal(str)
+
+    def __init__(self, folder_path):
+        super().__init__()
+        self.folder_path = folder_path
+
+    def run(self):
+        try:
+            # Convert path format if needed
+            self.progress.emit(f"Converting path format...")
+            folder_path = convert_path_format.convert_path_format(self.folder_path)
+
+            # List and process directories
+            self.progress.emit(f"Listing directories in '{folder_path}'...")
+            list_all_directories.process_directories(folder_path)
+
+            # Process batch files
+            output_folder = os.path.join(folder_path, 'Seeker_Output/file_batches')
+            if not os.path.exists(output_folder):
+                self.error.emit(f"Output folder '{output_folder}' does not exist.")
+                return
+
+            self.progress.emit(f"Processing batch files...")
+            batch_files = [f for f in os.listdir(output_folder) if os.path.isfile(os.path.join(output_folder, f))]
+            
+            for i, batch_file in enumerate(batch_files):
+                batch_file_path = os.path.join(output_folder, batch_file)
+                self.progress.emit(f"Processing batch {i+1}/{len(batch_files)}: {batch_file}")
+                process_batch.process_batch(batch_file_path)
+
+            # Return the Seeker_Output folder path
+            seeker_output = os.path.join(folder_path, 'Seeker_Output')
+            self.finished.emit(seeker_output)
+
+        except Exception as e:
+            self.error.emit(str(e))
+
+
+class ExtensionViewer(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Seeker Output Extension Viewer")
-        self.resize(1200, 800)
+        self.setWindowTitle("Cluster Seeker - Duplicate File Finder")
+        self.resize(1200, 900)
 
         # Define purple theme colors
         self.purple_dark = "#4a235a"
@@ -72,6 +117,30 @@ class ExtensionViewer(QMainWindow):  # Changed to QMainWindow for more features
                 background-color: {self.purple_dark};
                 color: white;
             }}
+            QGroupBox {{
+                font-weight: bold;
+                border: 2px solid {self.purple_light};
+                border-radius: 5px;
+                margin-top: 10px;
+                padding-top: 10px;
+            }}
+            QGroupBox::title {{
+                color: {self.purple_dark};
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+            }}
+            QTextEdit {{
+                border: 1px solid {self.purple_light};
+                border-radius: 4px;
+                font-family: Consolas, monospace;
+                font-size: 11px;
+            }}
+            QLineEdit {{
+                border: 1px solid {self.purple_light};
+                border-radius: 4px;
+                padding: 5px;
+            }}
         """)
 
         # Create central widget
@@ -81,17 +150,64 @@ class ExtensionViewer(QMainWindow):  # Changed to QMainWindow for more features
         self.layout.setSpacing(10)
         self.layout.setContentsMargins(15, 15, 15, 15)
 
-        # Top section with buttons
+        # ============ STEP 1: Scan Folder Section ============
+        self.scan_group = QGroupBox("Step 1: Scan Folder for Duplicates")
+        self.scan_layout = QVBoxLayout(self.scan_group)
+
+        # Folder selection row
+        self.folder_select_layout = QHBoxLayout()
+        self.folder_input = QLineEdit()
+        self.folder_input.setPlaceholderText("Select a folder to scan...")
+        self.folder_input.setReadOnly(True)
+        self.folder_select_layout.addWidget(self.folder_input)
+
+        self.browse_btn = QPushButton("📁 Browse")
+        self.browse_btn.setMaximumWidth(100)
+        self.browse_btn.clicked.connect(self.browse_scan_folder)
+        self.folder_select_layout.addWidget(self.browse_btn)
+
+        self.scan_btn = QPushButton("🔍 Start Scan")
+        self.scan_btn.setMaximumWidth(120)
+        self.scan_btn.clicked.connect(self.start_scan)
+        self.scan_btn.setEnabled(False)
+        self.folder_select_layout.addWidget(self.scan_btn)
+
+        self.scan_layout.addLayout(self.folder_select_layout)
+
+        # Scan log output
+        self.scan_log = QTextEdit()
+        self.scan_log.setReadOnly(True)
+        self.scan_log.setMaximumHeight(120)
+        self.scan_log.setPlaceholderText("Scan progress will appear here...")
+        self.scan_layout.addWidget(self.scan_log)
+
+        # Scan progress bar
+        self.scan_progress = QProgressBar()
+        self.scan_progress.setVisible(False)
+        self.scan_progress.setRange(0, 0)  # Indeterminate
+        self.scan_layout.addWidget(self.scan_progress)
+
+        self.layout.addWidget(self.scan_group)
+
+        # ============ STEP 2: Load Results Section ============
+        self.results_group = QGroupBox("Step 2: View Scan Results")
+        self.results_layout = QVBoxLayout(self.results_group)
+
+        # Top section with load button
         self.top_section = QFrame()
         self.top_layout = QHBoxLayout(self.top_section)
         self.top_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.folder_btn = QPushButton("📁 Load Seeker_Output Folder")
+        self.folder_btn = QPushButton("📂 Load Seeker_Output Folder")
         self.folder_btn.setMinimumHeight(36)
         self.folder_btn.clicked.connect(self.load_folder)
         self.top_layout.addWidget(self.folder_btn)
 
-        self.layout.addWidget(self.top_section)
+        self.output_path_label = QLabel("")
+        self.output_path_label.setStyleSheet("font-weight: normal; color: #666;")
+        self.top_layout.addWidget(self.output_path_label, 1)
+
+        self.results_layout.addWidget(self.top_section)
 
         # Create splitter for better UI organization
         self.splitter = QSplitter(Qt.Horizontal)
@@ -128,36 +244,117 @@ class ExtensionViewer(QMainWindow):  # Changed to QMainWindow for more features
         self.splitter.addWidget(self.right_panel)
         self.splitter.setSizes([300, 700])
 
+        self.results_layout.addWidget(self.splitter)
+
         # Add progress bar
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
+        self.results_layout.addWidget(self.progress_bar)
 
         # Add export button
         self.export_btn = QPushButton("💾 Export Displayed Data to Excel")
         self.export_btn.clicked.connect(self.export_data)
         self.export_btn.setEnabled(False)
+        self.results_layout.addWidget(self.export_btn)
 
-        # Add elements to main layout
-        self.layout.addWidget(self.splitter)
-        self.layout.addWidget(self.progress_bar)
-        self.layout.addWidget(self.export_btn)
+        self.layout.addWidget(self.results_group)
 
         # Add status bar
         self.statusBar = QStatusBar()
         self.setStatusBar(self.statusBar)
-        self.statusBar.showMessage("Ready")
+        self.statusBar.showMessage("Ready - Select a folder to scan or load existing results")
 
         # Set data members
         self.folder_path = None
+        self.scan_folder_path = None
         self.all_data = None
         self.extension_to_dfs = {}
         self.xlsx_files = []
         self.current_file_index = 0
+        self.scan_worker = None
+
+    def browse_scan_folder(self):
+        """Browse for a folder to scan."""
+        folder = QFileDialog.getExistingDirectory(self, "Select Folder to Scan")
+        if folder:
+            self.scan_folder_path = folder
+            self.folder_input.setText(folder)
+            self.scan_btn.setEnabled(True)
+            self.log_scan(f"Selected folder: {folder}")
+
+    def log_scan(self, message):
+        """Add a message to the scan log."""
+        self.scan_log.append(message)
+        # Auto-scroll to bottom
+        scrollbar = self.scan_log.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())
+
+    def start_scan(self):
+        """Start scanning the selected folder."""
+        if not self.scan_folder_path:
+            QMessageBox.warning(self, "No Folder", "Please select a folder to scan first.")
+            return
+
+        # Disable buttons during scan
+        self.scan_btn.setEnabled(False)
+        self.browse_btn.setEnabled(False)
+        self.scan_progress.setVisible(True)
+        self.scan_log.clear()
+        self.log_scan(f"Starting scan of: {self.scan_folder_path}")
+
+        # Create and start worker thread
+        self.scan_worker = ScanWorker(self.scan_folder_path)
+        self.scan_worker.progress.connect(self.on_scan_progress)
+        self.scan_worker.finished.connect(self.on_scan_finished)
+        self.scan_worker.error.connect(self.on_scan_error)
+        self.scan_worker.start()
+
+    def on_scan_progress(self, message):
+        """Handle progress updates from scan worker."""
+        self.log_scan(message)
+        self.statusBar.showMessage(message)
+
+    def on_scan_finished(self, output_folder):
+        """Handle scan completion."""
+        self.scan_progress.setVisible(False)
+        self.scan_btn.setEnabled(True)
+        self.browse_btn.setEnabled(True)
+        
+        self.log_scan(f"✅ Scan complete!")
+        self.log_scan(f"Output saved to: {output_folder}")
+        self.statusBar.showMessage("Scan complete!")
+
+        # Ask user if they want to load the results
+        reply = QMessageBox.question(
+            self, "Scan Complete",
+            f"Scan completed successfully!\n\nOutput folder:\n{output_folder}\n\nWould you like to load the results now?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.Yes
+        )
+
+        if reply == QMessageBox.Yes:
+            self.load_folder_path(output_folder)
+
+    def on_scan_error(self, error_message):
+        """Handle scan errors."""
+        self.scan_progress.setVisible(False)
+        self.scan_btn.setEnabled(True)
+        self.browse_btn.setEnabled(True)
+        
+        self.log_scan(f"❌ Error: {error_message}")
+        self.statusBar.showMessage("Scan failed")
+        QMessageBox.critical(self, "Scan Error", f"An error occurred during scanning:\n\n{error_message}")
 
     def load_folder(self):
-        self.folder_path = QFileDialog.getExistingDirectory(self, "Select Seeker_Output Folder")
-        if not self.folder_path:
-            return
+        """Manually browse and load a Seeker_Output folder."""
+        folder = QFileDialog.getExistingDirectory(self, "Select Seeker_Output Folder")
+        if folder:
+            self.load_folder_path(folder)
+
+    def load_folder_path(self, folder_path):
+        """Load a Seeker_Output folder by path."""
+        self.folder_path = folder_path
+        self.output_path_label.setText(f"📁 {folder_path}")
 
         self.extensions_list.clear()
         self.extension_to_dfs.clear()
